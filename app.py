@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import json
-import openai
 import anthropic
 import google.generativeai as genai
 
@@ -12,12 +11,11 @@ st.set_page_config(
 )
 
 st.title("🏈 Arena de Predicciones NFL - Semana Actual")
-st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfrentamiento real multi-modelo.")
+st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfrentamiento multi-modelo.")
 st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran estrictamente en formato **(Puntos Visitante - Puntos Local)**.")
 
 # Configurar clientes de IA de forma segura
 try:
-    openai_client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     claude_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
@@ -27,16 +25,8 @@ except Exception as e:
 with st.sidebar:
     st.header("⚙️ Estado de Conexiones")
     if st.button("🔍 Probar Conexión con IAs"):
-        # Prueba OpenAI
-        try:
-            openai_client.chat.completions.create(
-                model="gpt-4o", 
-                messages=[{"role": "user", "content": "ping"}], 
-                max_tokens=5
-            )
-            st.success("✅ OpenAI: Conectado")
-        except Exception as e:
-            st.error(f"❌ OpenAI Error: {e}")
+        # OpenAI (Simulado / Aviso de cuota)
+        st.info("ℹ️ OpenAI: Usando respaldo local por cuota.")
 
         # Prueba Anthropic
         try:
@@ -103,24 +93,14 @@ def obtener_cartelera_espn():
         st.error(f"Error al conectar con la API de ESPN: {e}")
     return None, None, None, []
 
-def consultar_openai(visitante, local):
-    prompt = f"""Analiza el partido NFL: {visitante} (Visitante) vs {local} (Local).
-    Devuelve estrictamente un JSON válido con estas llaves exactas:
-    - "ganador": "Nombre del equipo ganador"
-    - "puntos_visitante": número entero
-    - "puntos_local": número entero
-    - "analisis": "Explicación de 1 línea"
-    Solo el JSON puro sin bloques markdown."""
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-        texto = response.choices[0].message.content.strip().replace("```json", "").replace("```", "")
-        return json.loads(texto)
-    except Exception as e:
-        return {"ganador": "Error", "puntos_visitante": 0, "puntos_local": 0, "analisis": str(e)}
+# Función de respaldo para OpenAI (sin consumo de API key)
+def consultar_openai_respaldo(visitante, local):
+    return {
+        "ganador": local,
+        "puntos_visitante": 20,
+        "puntos_local": 24,
+        "analisis": f"Análisis táctico (Modo Respaldo): Ventaja para {local} en casa."
+    }
 
 def consultar_claude(visitante, local):
     prompt = f"""Analiza el partido NFL: {visitante} (Visitante) vs {local} (Local).
@@ -185,14 +165,14 @@ if cartelera:
             with st.expander("🤖 Ver Arena de Predicciones Real (IA vs IA)"):
                 if st.button(f"⚡ Ejecutar Predicciones", key=f"btn_{p['id']}"):
                     with st.spinner("Las IAs están analizando los encuentros..."):
-                        res_gpt = consultar_openai(p['nombre_visitante'], p['nombre_local'])
+                        res_gpt = consultar_openai_respaldo(p['nombre_visitante'], p['nombre_local'])
                         res_claude = consultar_claude(p['nombre_visitante'], p['nombre_local'])
                         res_gemini = consultar_gemini(p['nombre_visitante'], p['nombre_local'])
                     
                     ic1, ic2, ic3 = st.columns(3)
                     
                     with ic1:
-                        st.markdown("**🟢 OpenAI (GPT-4o)**")
+                        st.markdown("**🟢 OpenAI (Respaldo)**")
                         st.write(f"Ganador: **{res_gpt.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_gpt.get('puntos_visitante')} - {res_gpt.get('puntos_local')}`")
                         st.caption(res_gpt.get('analisis'))
