@@ -25,10 +25,10 @@ except Exception as e:
 with st.sidebar:
     st.header("⚙️ Estado de Conexiones")
     if st.button("🔍 Probar Conexión con IAs"):
-        # OpenAI (Simulado / Aviso de cuota)
+        # OpenAI (Simulado por falta de fondos)
         st.info("ℹ️ OpenAI: Usando respaldo local por cuota.")
 
-        # Prueba Anthropic (Usando Haiku para compatibilidad total)
+        # Prueba Anthropic
         try:
             claude_client.messages.create(
                 model="claude-3-haiku-20240307", 
@@ -39,7 +39,7 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ Anthropic Error: {e}")
 
-        # Prueba Google Gemini (Usando gemini-pro estándar)
+        # Prueba Google Gemini
         try:
             model_test_g = genai.GenerativeModel('gemini-pro')
             model_test_g.generate_content("ping")
