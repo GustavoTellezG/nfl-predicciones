@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 import anthropic
-from google import genai
+import google.generativeai as genai
 
 st.set_page_config(
     page_title="Arena de Predicciones NFL",
@@ -17,7 +17,7 @@ st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran estrictame
 # Configurar clientes de IA de forma segura
 try:
     claude_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-    google_client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
     st.warning("⚠️ Faltan algunas claves de API en los Secrets de Streamlit.")
 
@@ -39,12 +39,10 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ Anthropic Error: {e}")
 
-        # Prueba Google Gemini (Usando gemini-1.5-flash por estabilidad)
+        # Prueba Google Gemini (Librería clásica estable)
         try:
-            google_client.models.generate_content(
-                model='gemini-1.5-flash',
-                contents='ping'
-            )
+            model_test_g = genai.GenerativeModel('gemini-1.5-flash')
+            model_test_g.generate_content("ping")
             st.success("✅ Google Gemini: Conectado")
         except Exception as e:
             st.error(f"❌ Gemini Error: {e}")
@@ -132,10 +130,8 @@ def consultar_gemini(visitante, local):
     - "analisis": "Explicación de 1 línea"
     Responde únicamente con el JSON."""
     try:
-        response = google_client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=prompt,
-        )
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(texto_limpio)
     except Exception as e:
