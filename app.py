@@ -26,10 +26,10 @@ with st.sidebar:
         st.info("ℹ️ OpenAI: Usando respaldo local.")
         st.info("ℹ️ Anthropic: Usando respaldo local.")
 
-        # Prueba Google Gemini con el modelo activo vigente
+        # Prueba Google Gemini con el modelo actualizado solicitado (gemini-3.6-flash)
         try:
             google_client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.6-flash',
                 contents='ping'
             )
             st.success("✅ Google Gemini: Conectado")
@@ -109,7 +109,7 @@ def consultar_gemini(visitante, local):
     Responde únicamente con el JSON."""
     try:
         response = google_client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.6-flash',
             contents=prompt,
         )
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
@@ -164,7 +164,7 @@ if cartelera:
                         st.caption(res_claude.get('analisis'))
                         
                     with ic3:
-                        st.markdown("**🔵 Google (Gemini 2.5 Flash)**")
+                        st.markdown("**🔵 Google (Gemini 3.6 Flash)**")
                         st.write(f"Ganador: **{res_gemini.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_gemini.get('puntos_visitante')} - {res_gemini.get('puntos_local')}`")
                         st.caption(res_gemini.get('analisis'))
