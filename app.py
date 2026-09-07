@@ -31,7 +31,7 @@ with st.sidebar:
         # Prueba Anthropic
         try:
             claude_client.messages.create(
-                model="claude-3-7-sonnet-20250219", 
+                model="claude-3-5-sonnet-20241022", 
                 max_tokens=5, 
                 messages=[{"role": "user", "content": "ping"}]
             )
@@ -41,7 +41,7 @@ with st.sidebar:
 
         # Prueba Google Gemini
         try:
-            model_test_g = genai.GenerativeModel('gemini-2.5-flash')
+            model_test_g = genai.GenerativeModel('gemini-1.5-flash')
             model_test_g.generate_content("ping")
             st.success("✅ Google Gemini: Conectado")
         except Exception as e:
@@ -112,7 +112,7 @@ def consultar_claude(visitante, local):
     Solo el JSON puro."""
     try:
         message = claude_client.messages.create(
-            model="claude-3-7-sonnet-20250219",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -130,7 +130,7 @@ def consultar_gemini(visitante, local):
     - "analisis": "Explicación de 1 línea"
     Responde únicamente con el JSON."""
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(texto_limpio)
@@ -178,13 +178,13 @@ if cartelera:
                         st.caption(res_gpt.get('analisis'))
                         
                     with ic2:
-                        st.markdown("**🟠 Anthropic (Claude 3.7)**")
+                        st.markdown("**🟠 Anthropic (Claude 3.5)**")
                         st.write(f"Ganador: **{res_claude.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_claude.get('puntos_visitante')} - {res_claude.get('puntos_local')}`")
                         st.caption(res_claude.get('analisis'))
                         
                     with ic3:
-                        st.markdown("**🔵 Google (Gemini 2.5 Flash)**")
+                        st.markdown("**🔵 Google (Gemini 1.5 Flash)**")
                         st.write(f"Ganador: **{res_gemini.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_gemini.get('puntos_visitante')} - {res_gemini.get('puntos_local')}`")
                         st.caption(res_gemini.get('analisis'))
