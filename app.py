@@ -1,8 +1,7 @@
 import streamlit as st
 import requests
 import json
-import anthropic
-import google.generativeai as genai
+from google import genai
 
 st.set_page_config(
     page_title="Arena de Predicciones NFL",
@@ -11,38 +10,28 @@ st.set_page_config(
 )
 
 st.title("🏈 Arena de Predicciones NFL - Semana Actual")
-st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfrentamiento multi-modelo.")
+st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfoque en Google Gemini.")
 st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran estrictamente en formato **(Puntos Visitante - Puntos Local)**.")
 
-# Configurar clientes de IA de forma segura
+# Configurar cliente de Google GenAI de forma segura
 try:
-    claude_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    google_client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
-    st.warning("⚠️ Faltan algunas claves de API en los Secrets de Streamlit.")
+    st.warning("⚠️ Falta la clave de API de Gemini en los Secrets de Streamlit.")
 
 # --- PANEL LATERAL DE DIAGNÓSTICO DE APIS ---
 with st.sidebar:
     st.header("⚙️ Estado de Conexiones")
     if st.button("🔍 Probar Conexión con IAs"):
-        # OpenAI (Respaldo por cuota)
-        st.info("ℹ️ OpenAI: Usando respaldo local por cuota.")
+        st.info("ℹ️ OpenAI: Usando respaldo local.")
+        st.info("ℹ️ Anthropic: Usando respaldo local.")
 
-        # Prueba Anthropic
+        # Prueba Google Gemini con el modelo activo vigente (gemini-2.5-flash)
         try:
-            claude_client.messages.create(
-                model="claude-3-haiku-20240307", 
-                max_tokens=5, 
-                messages=[{"role": "user", "content": "ping"}]
+            google_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents='ping'
             )
-            st.success("✅ Anthropic: Conectado")
-        except Exception as e:
-            st.error(f"❌ Anthropic Error: {e}")
-
-        # Prueba Google Gemini (Librería clásica estable)
-        try:
-            model_test_g = genai.GenerativeModel('gemini-1.5-flash')
-            model_test_g.generate_content("ping")
             st.success("✅ Google Gemini: Conectado")
         except Exception as e:
             st.error(f"❌ Gemini Error: {e}")
@@ -66,8 +55,8 @@ def obtener_cartelera_espn():
                 competitions = event['competitions'][0]
                 competitors = competitions['competitors']
                 
-                local = next((c for c in competitors if c.get('homeAway') == 'home'), {})
-                visitante = next((c for c in competitors if c.get('homeAway') == 'away'), {})
+                local = next((c for c in competitors if c.get('homeAway'] == 'home'), {})
+                visitante = next((c for c in competitors if c.get('homeAway'] == 'away'), {})
                 
                 nombre_local = local.get('team', {}).get('displayName', 'Local')
                 score_local = local.get('score', '0')
@@ -93,33 +82,22 @@ def obtener_cartelera_espn():
         st.error(f"Error al conectar con la API de ESPN: {e}")
     return None, None, None, []
 
-# Función de respaldo para OpenAI
+# Funciones de respaldo para OpenAI y Claude
 def consultar_openai_respaldo(visitante, local):
     return {
         "ganador": local,
         "puntos_visitante": 20,
         "puntos_local": 24,
-        "analisis": f"Análisis táctico (Modo Respaldo): Ventaja para {local} en casa."
+        "analisis": f"Análisis táctico (Respaldo): Ventaja para {local} en casa."
     }
 
-def consultar_claude(visitante, local):
-    prompt = f"""Analiza el partido NFL: {visitante} (Visitante) vs {local} (Local).
-    Devuelve estrictamente un JSON válido con estas llaves exactas:
-    - "ganador": "Nombre del equipo ganador"
-    - "puntos_visitante": número entero
-    - "puntos_local": número entero
-    - "analisis": "Explicación de 1 línea"
-    Solo el JSON puro."""
-    try:
-        message = claude_client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        texto = message.content[0].text.strip().replace("```json", "").replace("```", "")
-        return json.loads(texto)
-    except Exception as e:
-        return {"ganador": "Error", "puntos_visitante": 0, "puntos_local": 0, "analisis": str(e)}
+def consultar_claude_respaldo(visitante, local):
+    return {
+        "ganador": visitante,
+        "puntos_visitante": 27,
+        "puntos_local": 24,
+        "analisis": f"Análisis táctico (Respaldo): El juego aéreo de {visitante} dominará."
+    }
 
 def consultar_gemini(visitante, local):
     prompt = f"""Analiza el partido NFL: {visitante} (Visitante) vs {local} (Local).
@@ -130,8 +108,10 @@ def consultar_gemini(visitante, local):
     - "analisis": "Explicación de 1 línea"
     Responde únicamente con el JSON."""
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
+        response = google_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(texto_limpio)
     except Exception as e:
@@ -164,9 +144,9 @@ if cartelera:
             
             with st.expander("🤖 Ver Arena de Predicciones Real (IA vs IA)"):
                 if st.button(f"⚡ Ejecutar Predicciones", key=f"btn_{p['id']}"):
-                    with st.spinner("Las IAs están analizando los encuentros..."):
+                    with st.spinner("Gemini está analizando los encuentros..."):
                         res_gpt = consultar_openai_respaldo(p['nombre_visitante'], p['nombre_local'])
-                        res_claude = consultar_claude(p['nombre_visitante'], p['nombre_local'])
+                        res_claude = consultar_claude_respaldo(p['nombre_visitante'], p['nombre_local'])
                         res_gemini = consultar_gemini(p['nombre_visitante'], p['nombre_local'])
                     
                     ic1, ic2, ic3 = st.columns(3)
@@ -178,13 +158,13 @@ if cartelera:
                         st.caption(res_gpt.get('analisis'))
                         
                     with ic2:
-                        st.markdown("**🟠 Anthropic (Claude 3 Haiku)**")
+                        st.markdown("**🟠 Anthropic (Respaldo)**")
                         st.write(f"Ganador: **{res_claude.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_claude.get('puntos_visitante')} - {res_claude.get('puntos_local')}`")
                         st.caption(res_claude.get('analisis'))
                         
                     with ic3:
-                        st.markdown("**🔵 Google (Gemini 1.5 Flash)**")
+                        st.markdown("**🔵 Google (Gemini 2.5 Flash)**")
                         st.write(f"Ganador: **{res_gemini.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_gemini.get('puntos_visitante')} - {res_gemini.get('puntos_local')}`")
                         st.caption(res_gemini.get('analisis'))
