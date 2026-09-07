@@ -39,10 +39,10 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ Anthropic Error: {e}")
 
-        # Prueba Google Gemini (Usando gemini-3.5-flash)
+        # Prueba Google Gemini (Usando gemini-1.5-flash por estabilidad)
         try:
             google_client.models.generate_content(
-                model='gemini-3.5-flash',
+                model='gemini-1.5-flash',
                 contents='ping'
             )
             st.success("✅ Google Gemini: Conectado")
@@ -133,7 +133,7 @@ def consultar_gemini(visitante, local):
     Responde únicamente con el JSON."""
     try:
         response = google_client.models.generate_content(
-            model='gemini-3.5-flash',
+            model='gemini-1.5-flash',
             contents=prompt,
         )
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
@@ -188,7 +188,7 @@ if cartelera:
                         st.caption(res_claude.get('analisis'))
                         
                     with ic3:
-                        st.markdown("**🔵 Google (Gemini 3.5 Flash)**")
+                        st.markdown("**🔵 Google (Gemini 1.5 Flash)**")
                         st.write(f"Ganador: **{res_gemini.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_gemini.get('puntos_visitante')} - {res_gemini.get('puntos_local')}`")
                         st.caption(res_gemini.get('analisis'))
