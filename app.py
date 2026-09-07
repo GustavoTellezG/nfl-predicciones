@@ -14,7 +14,7 @@ st.title("🏈 Arena de Predicciones NFL - Semana Actual")
 st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfrentamiento multi-modelo.")
 st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran estrictamente en formato **(Puntos Visitante - Puntos Local)**.")
 
-# Configurar clientes de IA con el nuevo SDK de Google y Anthropic
+# Configurar clientes de IA de forma segura
 try:
     claude_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     google_client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
@@ -39,10 +39,10 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ Anthropic Error: {e}")
 
-        # Prueba Google Gemini (Nuevo SDK)
+        # Prueba Google Gemini (Usando gemini-3.5-flash)
         try:
             google_client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash',
                 contents='ping'
             )
             st.success("✅ Google Gemini: Conectado")
@@ -133,7 +133,7 @@ def consultar_gemini(visitante, local):
     Responde únicamente con el JSON."""
     try:
         response = google_client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.5-flash',
             contents=prompt,
         )
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
@@ -188,7 +188,7 @@ if cartelera:
                         st.caption(res_claude.get('analisis'))
                         
                     with ic3:
-                        st.markdown("**🔵 Google (Gemini 2.5 Flash)**")
+                        st.markdown("**🔵 Google (Gemini 3.5 Flash)**")
                         st.write(f"Ganador: **{res_gemini.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_gemini.get('puntos_visitante')} - {res_gemini.get('puntos_local')}`")
                         st.caption(res_gemini.get('analisis'))
