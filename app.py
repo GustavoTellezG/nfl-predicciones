@@ -26,7 +26,7 @@ with st.sidebar:
         st.info("ℹ️ OpenAI: Usando respaldo local.")
         st.info("ℹ️ Anthropic: Usando respaldo local.")
 
-        # Prueba Google Gemini con el modelo activo vigente (gemini-2.5-flash)
+        # Prueba Google Gemini con el modelo activo vigente
         try:
             google_client.models.generate_content(
                 model='gemini-2.5-flash',
@@ -55,8 +55,8 @@ def obtener_cartelera_espn():
                 competitions = event['competitions'][0]
                 competitors = competitions['competitors']
                 
-                local = next((c for c in competitors if c.get('homeAway'] == 'home'), {})
-                visitante = next((c for c in competitors if c.get('homeAway'] == 'away'), {})
+                local = next((c for c in competitors if c.get('homeAway') == 'home'), {})
+                visitante = next((c for c in competitors if c.get('homeAway') == 'away'), {})
                 
                 nombre_local = local.get('team', {}).get('displayName', 'Local')
                 score_local = local.get('score', '0')
