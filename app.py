@@ -57,7 +57,6 @@ def obtener_cartelera_espn():
         st.error(f"Error al conectar con la API de ESPN: {e}")
     return None, None, None, []
 
-# Función de predicción ajustada estrictamente a la regla (Visitante - Local)
 def obtener_predicciones_ia(visitante, local):
     return {
         "OpenAI (GPT-4o)": {
@@ -105,7 +104,6 @@ if cartelera:
                 st.markdown(f"### 🏠 {p['nombre_local']}")
                 st.write(f"Marcador real: **{p['score_local']}**")
             
-            # Sección de Arena de Predicciones por Partido
             with st.expander("🤖 Ver Arena de Predicciones (IA vs IA)"):
                 predicciones = obtener_predicciones_ia(p['nombre_visitante'], p['nombre_local'])
                 
@@ -119,15 +117,15 @@ if cartelera:
                     st.caption(data_gpt['analisis'])
                     
                 with ic2:
-                    data_claude = predicciones["Anthropic (Claude)"]
-                    st.markdown("**🟠 Anthropic (Claude)**")
+                    data_claude = predicciones["Anthropic (Claude 3.5)"]
+                    st.markdown("**🟠 Anthropic (Claude 3.5)**")
                     st.write(f"Ganador: **{data_claude['ganador']}**")
                     st.write(f"Pronóstico: `{data_claude['puntos_visitante']} - {data_claude['puntos_local']}`")
                     st.caption(data_claude['analisis'])
                     
                 with ic3:
                     data_gemini = predicciones["Google (Gemini Pro)"]
-                    st.markdown("**🔵 Google (Gemini)**")
+                    st.markdown("**🔵 Google (Gemini Pro)**")
                     st.write(f"Ganador: **{data_gemini['ganador']}**")
                     st.write(f"Pronóstico: `{data_gemini['puntos_visitante']} - {data_gemini['puntos_local']}`")
                     st.caption(data_gemini['analisis'])
