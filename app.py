@@ -1,5 +1,9 @@
 import streamlit as st
 import requests
+import json
+import openai
+import anthropic
+import google.generativeai as genai
 
 st.set_page_config(
     page_title="Arena de Predicciones NFL",
@@ -8,8 +12,16 @@ st.set_page_config(
 )
 
 st.title("🏈 Arena de Predicciones NFL - Semana Actual")
-st.markdown("Dashboard interactivo conectado en tiempo real a la API pública de ESPN con predicciones multi-modelo.")
-st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran en formato **(Puntos Visitante - Puntos Local)**, respetando siempre el orden del enfrentamiento.")
+st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfrentamiento real multi-modelo (OpenAI, Claude, Gemini).")
+st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran estrictamente en formato **(Puntos Visitante - Puntos Local)**.")
+
+# Configurar clientes de IA usando los Secrets seguros de Streamlit
+try:
+    openai_client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    claude_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+except Exception as e:
+    st.warning("⚠️ Faltan algunas claves de API en los Secrets de Streamlit. Las llamadas reales podrían fallar hasta configurarlas.")
 
 @st.cache_data(ttl=3600)
 def obtener_cartelera_espn():
@@ -57,27 +69,59 @@ def obtener_cartelera_espn():
         st.error(f"Error al conectar con la API de ESPN: {e}")
     return None, None, None, []
 
-def obtener_predicciones_ia(visitante, local):
-    return {
-        "OpenAI (GPT-4o)": {
-            "ganador": local,
-            "puntos_visitante": 20,
-            "puntos_local": 24,
-            "analisis": f"Ventaja de localía para {local} controlando el reloj en el cierre."
-        },
-        "Anthropic (Claude 3.5)": {
-            "ganador": visitante,
-            "puntos_visitante": 27,
-            "puntos_local": 24,
-            "analisis": f"El juego aéreo de {visitante} romperá la defensiva secundaria."
-        },
-        "Google (Gemini Pro)": {
-            "ganador": local,
-            "puntos_visitante": 17,
-            "puntos_local": 21,
-            "analisis": f"Encuentro cerrado que se define por errores del visitante {visitante}."
-        }
-    }
+# Funciones de consulta real a cada API
+def consultar_openai(visitante, local):
+    prompt = f"""Eres un analista experto en la NFL. Analiza el partido: {visitante} (Visitante) vs {local} (Local).
+    Devuelve estrictamente un JSON válido con estas llaves exactas:
+    - "ganador": "Nombre del equipo ganador"
+    - "puntos_visitante": número entero de puntos que anotará el visitante
+    - "puntos_local": número entero de puntos que anotará el local
+    - "analisis": "Breve explicación táctica de 1 línea"
+    No agregues markdown extra como ```json, solo el objeto JSON puro."""
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        return json.loads(response.choices[0].message.content.strip())
+    except Exception as e:
+        return {"ganador": "Error", "puntos_visitante": 0, "puntos_local": 0, "analisis": str(e)}
+
+def consultar_claude(visitante, local):
+    prompt = f"""Eres un analista experto en la NFL. Analiza el partido: {visitante} (Visitante) vs {local} (Local).
+    Devuelve estrictamente un objeto JSON válido con estas llaves exactas:
+    - "ganador": "Nombre del equipo ganador"
+    - "puntos_visitante": número entero de puntos del visitante
+    - "puntos_local": número entero de puntos del local
+    - "analisis": "Breve explicación táctica de 1 línea"
+    No incluyas texto adicional fuera del JSON."""
+    try:
+        message = claude_client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=200,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return json.loads(message.content[0].text.strip())
+    except Exception as e:
+        return {"ganador": "Error", "puntos_visitante": 0, "puntos_local": 0, "analisis": str(e)}
+
+def consultar_gemini(visitante, local):
+    prompt = f"""Eres un analista experto en la NFL. Analiza el partido: {visitante} (Visitante) vs {local} (Local).
+    Devuelve estrictamente un objeto JSON válido con estas llaves exactas:
+    - "ganador": "Nombre del equipo ganador"
+    - "puntos_visitante": número entero de puntos del visitante
+    - "puntos_local": número entero de puntos del local
+    - "analisis": "Breve explicación táctica de 1 línea"
+    Responde únicamente con el JSON."""
+    try:
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        response = model.generate_content(prompt)
+        # Limpiar texto por si incluye bloques de código markdown
+        texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
+        return json.loads(texto_limpio)
+    except Exception as e:
+        return {"ganador": "Error", "puntos_visitante": 0, "puntos_local": 0, "analisis": str(e)}
 
 if st.button("🔄 Refrescar Datos"):
     st.cache_data.clear()
@@ -104,31 +148,35 @@ if cartelera:
                 st.markdown(f"### 🏠 {p['nombre_local']}")
                 st.write(f"Marcador real: **{p['score_local']}**")
             
-            with st.expander("🤖 Ver Arena de Predicciones (IA vs IA)"):
-                predicciones = obtener_predicciones_ia(p['nombre_visitante'], p['nombre_local'])
-                
-                ic1, ic2, ic3 = st.columns(3)
-                
-                with ic1:
-                    data_gpt = predicciones["OpenAI (GPT-4o)"]
-                    st.markdown("**🟢 OpenAI (GPT-4o)**")
-                    st.write(f"Ganador: **{data_gpt['ganador']}**")
-                    st.write(f"Pronóstico: `{data_gpt['puntos_visitante']} - {data_gpt['puntos_local']}`")
-                    st.caption(data_gpt['analisis'])
+            # Arena de Predicciones con ejecución real bajo demanda
+            with st.expander("🤖 Ver Arena de Predicciones Real (IA vs IA)"):
+                if st.button(f"⚡ Ejecutar Predicciones para este partido", key=f"btn_{p['id']}"):
+                    with st.spinner("Las IAs están analizando las líneas y esquemas..."):
+                        res_gpt = consultar_openai(p['nombre_visitante'], p['nombre_local'])
+                        res_claude = consultar_claude(p['nombre_visitante'], p['nombre_local'])
+                        res_gemini = consultar_gemini(p['nombre_visitante'], p['nombre_local'])
                     
-                with ic2:
-                    data_claude = predicciones["Anthropic (Claude 3.5)"]
-                    st.markdown("**🟠 Anthropic (Claude 3.5)**")
-                    st.write(f"Ganador: **{data_claude['ganador']}**")
-                    st.write(f"Pronóstico: `{data_claude['puntos_visitante']} - {data_claude['puntos_local']}`")
-                    st.caption(data_claude['analisis'])
+                    ic1, ic2, ic3 = st.columns(3)
                     
-                with ic3:
-                    data_gemini = predicciones["Google (Gemini Pro)"]
-                    st.markdown("**🔵 Google (Gemini Pro)**")
-                    st.write(f"Ganador: **{data_gemini['ganador']}**")
-                    st.write(f"Pronóstico: `{data_gemini['puntos_visitante']} - {data_gemini['puntos_local']}`")
-                    st.caption(data_gemini['analisis'])
+                    with ic1:
+                        st.markdown("**🟢 OpenAI (GPT-4o)**")
+                        st.write(f"Ganador: **{res_gpt.get('ganador')}**")
+                        st.write(f"Pronóstico: `{res_gpt.get('puntos_visitante')} - {res_gpt.get('puntos_local')}`")
+                        st.caption(res_gpt.get('analisis'))
+                        
+                    with ic2:
+                        st.markdown("**🟠 Anthropic (Claude 3.5)**")
+                        st.write(f"Ganador: **{res_claude.get('ganador')}**")
+                        st.write(f"Pronóstico: `{res_claude.get('puntos_visitante')} - {res_claude.get('puntos_local')}`")
+                        st.caption(res_claude.get('analisis'))
+                        
+                    with ic3:
+                        st.markdown("**🔵 Google (Gemini Pro)**")
+                        st.write(f"Ganador: **{res_gemini.get('ganador')}**")
+                        st.write(f"Pronóstico: `{res_gemini.get('puntos_visitante')} - {res_gemini.get('puntos_local')}`")
+                        st.caption(res_gemini.get('analisis'))
+                else:
+                    st.info("Haz clic en el botón de arriba para consultar el análisis en vivo de las tres IAs para este encuentro.")
                 
             st.markdown("---")
 else:
