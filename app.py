@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 import anthropic
-import google.generativeai as genai
+from google import genai
 
 st.set_page_config(
     page_title="Arena de Predicciones NFL",
@@ -14,10 +14,10 @@ st.title("🏈 Arena de Predicciones NFL - Semana Actual")
 st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfrentamiento multi-modelo.")
 st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran estrictamente en formato **(Puntos Visitante - Puntos Local)**.")
 
-# Configurar clientes de IA de forma segura
+# Configurar clientes de IA con el nuevo SDK de Google y Anthropic
 try:
     claude_client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    google_client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
     st.warning("⚠️ Faltan algunas claves de API en los Secrets de Streamlit.")
 
@@ -25,7 +25,7 @@ except Exception as e:
 with st.sidebar:
     st.header("⚙️ Estado de Conexiones")
     if st.button("🔍 Probar Conexión con IAs"):
-        # OpenAI (Simulado por falta de fondos)
+        # OpenAI (Respaldo por cuota)
         st.info("ℹ️ OpenAI: Usando respaldo local por cuota.")
 
         # Prueba Anthropic
@@ -39,10 +39,12 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ Anthropic Error: {e}")
 
-        # Prueba Google Gemini
+        # Prueba Google Gemini (Nuevo SDK)
         try:
-            model_test_g = genai.GenerativeModel('gemini-pro')
-            model_test_g.generate_content("ping")
+            google_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents='ping'
+            )
             st.success("✅ Google Gemini: Conectado")
         except Exception as e:
             st.error(f"❌ Gemini Error: {e}")
@@ -130,8 +132,10 @@ def consultar_gemini(visitante, local):
     - "analisis": "Explicación de 1 línea"
     Responde únicamente con el JSON."""
     try:
-        model = genai.GenerativeModel('gemini-pro')
-        response = model.generate_content(prompt)
+        response = google_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(texto_limpio)
     except Exception as e:
@@ -184,7 +188,7 @@ if cartelera:
                         st.caption(res_claude.get('analisis'))
                         
                     with ic3:
-                        st.markdown("**🔵 Google (Gemini Pro)**")
+                        st.markdown("**🔵 Google (Gemini 2.5 Flash)**")
                         st.write(f"Ganador: **{res_gemini.get('ganador')}**")
                         st.write(f"Pronóstico: `{res_gemini.get('puntos_visitante')} - {res_gemini.get('puntos_local')}`")
                         st.caption(res_gemini.get('analisis'))
