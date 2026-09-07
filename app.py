@@ -9,6 +9,7 @@ st.set_page_config(
 
 st.title("🏈 Arena de Predicciones NFL - Semana Actual")
 st.markdown("Dashboard interactivo conectado en tiempo real a la API pública de ESPN con predicciones multi-modelo.")
+st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran en formato **(Puntos Visitante - Puntos Local)**, respetando siempre el orden del enfrentamiento.")
 
 @st.cache_data(ttl=3600)
 def obtener_cartelera_espn():
@@ -56,24 +57,26 @@ def obtener_cartelera_espn():
         st.error(f"Error al conectar con la API de ESPN: {e}")
     return None, None, None, []
 
-# Función para simular/generar predicción de las IAs (aquí conectaremos las APIs reales después)
+# Función de predicción ajustada estrictamente a la regla (Visitante - Local)
 def obtener_predicciones_ia(visitante, local):
-    # Simulación inteligente basada en los nombres para estructurar la comparativa
     return {
         "OpenAI (GPT-4o)": {
             "ganador": local,
-            "marcador": "24 - 20",
-            "analisis": "Ventaja de localía y solidez en la línea ofensiva para controlar el reloj."
+            "puntos_visitante": 20,
+            "puntos_local": 24,
+            "analisis": f"Ventaja de localía para {local} controlando el reloj en el cierre."
         },
         "Anthropic (Claude 3.5)": {
             "ganador": visitante,
-            "marcador": "27 - 24",
-            "analisis": "El juego terrestre del visitante neutralizará la defensiva principal."
+            "puntos_visitante": 27,
+            "puntos_local": 24,
+            "analisis": f"El juego aéreo de {visitante} romperá la defensiva secundaria."
         },
         "Google (Gemini Pro)": {
             "ganador": local,
-            "marcador": "21 - 17",
-            "analisis": "Encuentro cerrado definido en los últimos minutos por errores del rival."
+            "puntos_visitante": 17,
+            "puntos_local": 21,
+            "analisis": f"Encuentro cerrado que se define por errores del visitante {visitante}."
         }
     }
 
@@ -92,7 +95,7 @@ if cartelera:
             
             with col1:
                 st.markdown(f"### ✈️ {p['nombre_visitante']}")
-                st.write(f"Marcador: **{p['score_visitante']}**")
+                st.write(f"Marcador real: **{p['score_visitante']}**")
                 
             with col2:
                 st.markdown(f"<div style='text-align: center; font-weight: bold; color: gray;'>VS</div>", unsafe_allow_html=True)
@@ -100,7 +103,7 @@ if cartelera:
                 
             with col3:
                 st.markdown(f"### 🏠 {p['nombre_local']}")
-                st.write(f"Marcador: **{p['score_local']}**")
+                st.write(f"Marcador real: **{p['score_local']}**")
             
             # Sección de Arena de Predicciones por Partido
             with st.expander("🤖 Ver Arena de Predicciones (IA vs IA)"):
@@ -112,21 +115,21 @@ if cartelera:
                     data_gpt = predicciones["OpenAI (GPT-4o)"]
                     st.markdown("**🟢 OpenAI (GPT-4o)**")
                     st.write(f"Ganador: **{data_gpt['ganador']}**")
-                    st.write(f"Pronóstico: `{data_gpt['marcador']}`")
+                    st.write(f"Pronóstico: `{data_gpt['puntos_visitante']} - {data_gpt['puntos_local']}`")
                     st.caption(data_gpt['analisis'])
                     
                 with ic2:
-                    data_claude = predicciones["Anthropic (Claude 3.5)"]
+                    data_claude = predicciones["Anthropic (Claude)"]
                     st.markdown("**🟠 Anthropic (Claude)**")
                     st.write(f"Ganador: **{data_claude['ganador']}**")
-                    st.write(f"Pronóstico: `{data_claude['marcador']}`")
+                    st.write(f"Pronóstico: `{data_claude['puntos_visitante']} - {data_claude['puntos_local']}`")
                     st.caption(data_claude['analisis'])
                     
                 with ic3:
                     data_gemini = predicciones["Google (Gemini Pro)"]
                     st.markdown("**🔵 Google (Gemini)**")
                     st.write(f"Ganador: **{data_gemini['ganador']}**")
-                    st.write(f"Pronóstico: `{data_gemini['marcador']}`")
+                    st.write(f"Pronóstico: `{data_gemini['puntos_visitante']} - {data_gemini['puntos_local']}`")
                     st.caption(data_gemini['analisis'])
                 
             st.markdown("---")
