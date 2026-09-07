@@ -15,6 +15,37 @@ st.title("🏈 Arena de Predicciones NFL - Semana Actual")
 st.markdown("Dashboard interactivo conectado en tiempo real a la API de ESPN con enfrentamiento real multi-modelo (OpenAI, Claude, Gemini).")
 st.info("ℹ️ **Regla de Marcadores:** Los pronósticos se muestran estrictamente en formato **(Puntos Visitante - Puntos Local)**.")
 
+# --- PANEL LATERAL DE DIAGNÓSTICO DE APIS ---
+with st.sidebar:
+    st.header("⚙️ Estado de Conexiones")
+    if st.button("🔍 Probar Conexión con IAs"):
+        # Prueba OpenAI
+        try:
+            client_test_o = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+            client_test_o.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": "ping"}], max_tokens=5)
+            st.success("✅ OpenAI: Conectado")
+        except Exception as e:
+            st.error(f"❌ OpenAI Error: {e}")
+
+        # Prueba Anthropic
+        try:
+            client_test_a = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+            client_test_a.messages.create(model="claude-3-5-sonnet-20241022", max_tokens=5, messages=[{"role": "user", "content": "ping"}])
+            st.success("✅ Anthropic: Conectado")
+        except Exception as e:
+            st.error(f"❌ Anthropic Error: {e}")
+
+        # Prueba Google Gemini
+        try:
+            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+            model_test_g = genai.GenerativeModel('gemini-1.5-pro')
+            model_test_g.generate_content("ping")
+            st.success("✅ Google Gemini: Conectado")
+        except Exception as e:
+            st.error(f"❌ Gemini Error: {e}")
+
+
+
 # Configurar clientes de IA usando los Secrets seguros de Streamlit
 try:
     openai_client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
